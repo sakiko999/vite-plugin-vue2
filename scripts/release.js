@@ -72,7 +72,7 @@ async function main() {
   // run tests before release
   step('\nRunning tests...')
   if (!skipTests && !isDryRun) {
-    await run('pnpm', ['test'])
+    await run('bun', ['run', 'test'])
   } else {
     console.log(`(skipped)`)
   }
@@ -83,18 +83,18 @@ async function main() {
   // build all packages with types
   step('\nBuilding for production...')
   if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build'])
+    await run('bun', ['run', 'build'])
   } else {
     console.log(`(skipped)`)
   }
 
   // generate changelog
   step('\nGenerating changelog...')
-  await run(`pnpm`, ['run', 'changelog'])
+  await run(`bun`, ['run', 'changelog'])
 
-  // update pnpm-lock.yaml
+  // update bun.lock
   step('\nUpdating lockfile...')
-  await run(`pnpm`, ['install', '--prefer-offline'])
+  await run(`bun`, ['install'])
 
   const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
   if (stdout) {
@@ -152,7 +152,7 @@ async function publishPackage(version, runIfNotDry) {
   step(`Publishing ${publishedName}...`)
   try {
     await runIfNotDry(
-      'pnpm',
+      'bun',
       [
         'publish',
         ...(releaseTag ? ['--tag', releaseTag] : []),
