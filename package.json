@@ -1,5 +1,5 @@
 {
-  "name": "@vitejs/plugin-vue2",
+  "name": "@anontokyo/plugin-vue2",
   "version": "2.4.0",
   "license": "MIT",
   "author": "Evan You",
@@ -10,6 +10,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
