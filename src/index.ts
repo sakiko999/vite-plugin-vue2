@@ -100,8 +100,10 @@ export default function vuePlugin(rawOptions: Options = {}): Plugin {
         cssDevSourcemap: config.css?.devSourcemap ?? false,
         devToolsEnabled: !config.isProduction
       }
-      if (!config.resolve.alias.some(({ find }) => find === 'vue')) {
-        config.resolve.alias.push({
+      const alias = config.resolve.alias
+      const hasVueAlias = alias.some(entry => entry.find === 'vue')
+      if (!hasVueAlias) {
+        alias.push({
           find: 'vue',
           replacement: 'vue/dist/vue.runtime.esm.js'
         })
@@ -127,8 +129,8 @@ export default function vuePlugin(rawOptions: Options = {}): Plugin {
       }
     },
 
-    load(id, opt) {
-      const ssr = opt?.ssr === true
+    load(id) {
+      const ssr = isServerRequest(this)
       if (id === NORMALIZER_ID) {
         return normalizerCode
       }
@@ -163,8 +165,8 @@ export default function vuePlugin(rawOptions: Options = {}): Plugin {
       }
     },
 
-    async transform(code, id, opt) {
-      const ssr = opt?.ssr === true
+    async transform(code, id) {
+      const ssr = isServerRequest(this)
       const { filename, query } = parseVueRequest(id)
       if (query.raw) {
         return
@@ -218,4 +220,8 @@ export default function vuePlugin(rawOptions: Options = {}): Plugin {
       }
     }
   }
+}
+
+function isServerRequest(ctx: any) {
+  return ctx.environment.config.consumer === 'server'
 }

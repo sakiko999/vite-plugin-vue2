@@ -1,8 +1,7 @@
 import path from 'node:path'
 import type { SFCBlock, SFCDescriptor } from 'vue/compiler-sfc'
-import type { PluginContext, TransformPluginContext } from 'rollup'
 import type { RawSourceMap } from 'source-map'
-import { transformWithEsbuild } from 'vite'
+import { transformWithOxc, type Rollup } from 'vite'
 import {
   createDescriptor,
   getPrevDescriptor,
@@ -20,7 +19,7 @@ export async function transformMain(
   code: string,
   filename: string,
   options: ResolvedOptions,
-  pluginContext: TransformPluginContext,
+  pluginContext: Rollup.TransformPluginContext,
   ssr: boolean
   // asCustomElement: boolean
 ) {
@@ -146,15 +145,16 @@ var __component__ = /*#__PURE__*/__normalizer(
       descriptor.scriptSetup?.lang === 'ts') &&
     !descriptor.script?.src // only normal script can have src
   ) {
-    const { code, map } = await transformWithEsbuild(
+    const inputMap = normalizeOxcInputMap(resolvedMap, filename)
+    const { code, map } = await transformWithOxc(
       resolvedCode,
       filename,
       {
-        loader: 'ts',
+        lang: 'ts',
         target: 'esnext',
         sourcemap: options.sourceMap
       },
-      resolvedMap
+      inputMap
     )
     resolvedCode = code
     resolvedMap = resolvedMap ? (map as any) : resolvedMap
@@ -176,7 +176,7 @@ var __component__ = /*#__PURE__*/__normalizer(
 async function genTemplateCode(
   descriptor: SFCDescriptor,
   options: ResolvedOptions,
-  pluginContext: PluginContext,
+  pluginContext: Rollup.PluginContext,
   ssr: boolean
 ) {
   const template = descriptor.template
@@ -224,7 +224,7 @@ async function genTemplateCode(
 async function genScriptCode(
   descriptor: SFCDescriptor,
   options: ResolvedOptions,
-  pluginContext: PluginContext,
+  pluginContext: Rollup.PluginContext,
   ssr: boolean
 ): Promise<{
   code: string
@@ -276,7 +276,7 @@ async function genScriptCode(
 
 async function genStyleCode(
   descriptor: SFCDescriptor,
-  pluginContext: PluginContext
+  pluginContext: Rollup.PluginContext
 ) {
   let stylesCode = ``
   let cssModulesMap: Record<string, string> | undefined
@@ -351,7 +351,7 @@ function genCSSModulesCode(
 
 async function genCustomBlockCode(
   descriptor: SFCDescriptor,
-  pluginContext: PluginContext
+  pluginContext: Rollup.PluginContext
 ) {
   let code = ''
   for (let index = 0; index < descriptor.customBlocks.length; index++) {
@@ -360,7 +360,9 @@ async function genCustomBlockCode(
       await linkSrcToDescriptor(block.src, descriptor, pluginContext, false)
     }
     const src = block.src || descriptor.filename
-    const attrsQuery = attrsToQuery(block.attrs, block.type)
+    const langFallback =
+      (block.src && path.extname(src).slice(1)) || block.type
+    const attrsQuery = attrsToQuery(block.attrs, langFallback)
     const srcQuery = block.src ? `&src=true` : ``
     const query = `?vue&type=${block.type}&index=${index}${srcQuery}${attrsQuery}`
     const request = JSON.stringify(src + query)
@@ -368,6 +370,22 @@ async function genCustomBlockCode(
     code += `if (typeof block${index} === 'function') block${index}(_sfc_main)\n`
   }
   return code
+}
+
+function normalizeOxcInputMap(
+  map: RawSourceMap | undefined,
+  filename: string
+): RawSourceMap | undefined {
+  if (!map) {
+    return
+  }
+
+  return (map as any).file == null
+    ? ({
+        ...map,
+        file: filename
+      } as RawSourceMap)
+    : map
 }
 
 /**
@@ -378,7 +396,7 @@ async function genCustomBlockCode(
 async function linkSrcToDescriptor(
   src: string,
   descriptor: SFCDescriptor,
-  pluginContext: PluginContext,
+  pluginContext: Rollup.PluginContext,
   scoped?: boolean
 ) {
   const srcFile =

@@ -1,10 +1,10 @@
-import type { RollupError } from 'rollup'
+import type { Rollup } from 'vite'
 import { WarningMessage } from 'vue/compiler-sfc'
 
 export function createRollupError(
   id: string,
   error: Error | WarningMessage
-): RollupError {
+): Rollup.RollupError {
   if ('msg' in error) {
     return {
       id,

@@ -1,19 +1,18 @@
 // @ts-ignore
 import hash from 'hash-sum'
 import type { SFCDescriptor, SFCTemplateCompileOptions } from 'vue/compiler-sfc'
-import type { PluginContext, TransformPluginContext } from 'rollup'
+import { normalizePath, type Rollup } from 'vite'
 import { getResolvedScript } from './script'
 import { createRollupError } from './utils/error'
 import type { ResolvedOptions } from '.'
 import path from 'node:path'
-import slash from 'slash'
 import { HMR_RUNTIME_ID } from './utils/hmrRuntime'
 
 export async function transformTemplateAsModule(
   code: string,
   descriptor: SFCDescriptor,
   options: ResolvedOptions,
-  pluginContext: TransformPluginContext,
+  pluginContext: Rollup.TransformPluginContext,
   ssr: boolean
 ): Promise<string> {
   let returnCode = compile(code, descriptor, options, pluginContext, ssr)
@@ -39,7 +38,7 @@ export function transformTemplateInMain(
   code: string,
   descriptor: SFCDescriptor,
   options: ResolvedOptions,
-  pluginContext: PluginContext,
+  pluginContext: Rollup.PluginContext,
   ssr: boolean
 ): string {
   return compile(code, descriptor, options, pluginContext, ssr)
@@ -51,7 +50,7 @@ export function compile(
   code: string,
   descriptor: SFCDescriptor,
   options: ResolvedOptions,
-  pluginContext: PluginContext,
+  pluginContext: Rollup.PluginContext,
   ssr: boolean
 ): string {
   const filename = descriptor.filename
@@ -114,7 +113,7 @@ function resolveTemplateCompilerOptions(
         base:
           (options.devServer.config.server?.origin ?? '') +
           options.devServer.config.base +
-          slash(path.relative(options.root, path.dirname(filename)))
+          normalizePath(path.relative(options.root, path.dirname(filename)))
       }
     }
   } else if (transformAssetUrls !== false) {
